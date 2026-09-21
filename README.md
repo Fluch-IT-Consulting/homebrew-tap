@@ -113,18 +113,29 @@ rechnungsgenerator erzeuge rechnung.yaml
 
 ### Anheben auf eine neue Fassung
 
-Die URL der Formel trägt eine numerische **Asset-ID**, keine Fassungsnummer –
-nur so lässt sich ein Asset aus einem privaten Repository laden. GitHub vergibt
-sie je Release neu. Beim Anheben also drei Zeilen ändern: `url`, `version` und
-`sha256`.
+Das geschieht von selbst. Wird im Repository des Generators ein Release
+**veröffentlicht**, hebt ein Workflow dort `url`, `version` und `sha256` in
+dieser Formel an und pusht die Änderung hierher. Commits von
+`github-actions[bot]` in diesem Repository kommen daher.
 
-Die ID nennt:
+Ausgelöst wird vom Veröffentlichen und nicht vom Tag: Der Tag baut nur einen
+Entwurf, und eine Formel, die auf ein noch unveröffentlichtes Asset zeigt,
+ließe jeden `brew upgrade` ins Leere laufen. Ein Prerelease hebt nichts an.
+
+Warum überhaupt drei Zeilen und nicht eine: Die URL trägt eine numerische
+**Asset-ID** statt einer Fassungsnummer – nur so lässt sich ein Asset aus einem
+privaten Repository laden –, und GitHub vergibt sie je Release neu.
+
+#### Von Hand, falls die Automatik ausfällt
+
+Die Asset-ID eines Releases nennt:
 
 ```
 gh api repos/Fluch-IT-Consulting/rechnungsgenerator/releases \
-  --jq '.[] | select(.tag_name=="v0.1.0") | .assets[] | "\(.id) \(.name)"'
+  --jq '.[] | select(.tag_name=="vX.Y.Z") | .assets[] | "\(.id) \(.name)"'
 ```
 
-Die Prüfsumme lässt sich aus dem Quelltext nachbauen: `./gradlew distZip`
-liefert dasselbe Archiv Byte für Byte, unabhängig von Maschine und
-Betriebssystem – nachgemessen zwischen macOS und dem Ubuntu-Runner.
+Die Prüfsumme lässt sich aus dem Quelltext nachbauen, statt das Archiv zu
+laden: `./gradlew distZip` liefert dasselbe Archiv Byte für Byte, unabhängig
+von Maschine und Betriebssystem – nachgemessen zwischen macOS und dem
+Ubuntu-Runner.
