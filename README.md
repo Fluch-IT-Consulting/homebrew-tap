@@ -10,9 +10,13 @@ PDF/A-1b-Dokument. Quelle:
 
 ### Installieren
 
-Beide Repositories sind **privat**. Dafür braucht es dreierlei: Lesezugriff auf
-dieses Tap-Repository, Lesezugriff auf das Repository des Generators und einen
-GitHub-Token in der Umgebung.
+Dieser Tap ist öffentlich, das Repository des Generators ist **privat**. Dafür
+braucht es zweierlei: Lesezugriff darauf und einen GitHub-Token in der
+Umgebung.
+
+Wer sich die Schritte unten nicht von Hand zusammensuchen will, nimmt
+[`setup.sh`](setup.sh) – dasselbe in sechs Stufen, mit Prüfung nach jedem
+Schritt.
 
 **1. Token anlegen.** Einen *Fine-grained* Personal Access Token auf
 <https://github.com/settings/personal-access-tokens/new>:
@@ -23,8 +27,8 @@ GitHub-Token in der Umgebung.
 - **Expiration:** höchstens 366 Tage; mehr lässt die Organisation nicht zu.
 - **Repository access:** „Only select repositories" → Knopf
   `Select repositories` → `Fluch-IT-Consulting/rechnungsgenerator`. In der
-  Liste steht auch `homebrew-tap`; das wird hier **nicht** gebraucht, denn den
-  Tap klont Homebrew über git und SSH.
+  Liste steht womöglich auch `homebrew-tap`; das wird hier **nicht** gebraucht,
+  denn der Tap ist öffentlich.
 - **Permissions:** `+ Add permissions`, im Suchfeld `Contents` eintippen – die
   Liste ist alphabetisch und lang. Danach ist nur zu **prüfen**, dass
   `Contents` und das automatisch ergänzte `Metadata` auf *Access: Read-only*
@@ -61,16 +65,12 @@ ein Dialog, ist „Immer erlauben" die Antwort.
 Homebrew setzt den Wert erst beim Herunterladen ein; er landet nicht im Cache
 und nicht in den Protokollen.
 
-**2. Tap hinzufügen** – mit der SSH-Adresse dahinter:
+**2. Tap hinzufügen und installieren:**
 
 ```
-brew tap fluch-it-consulting/tap git@github.com:Fluch-IT-Consulting/homebrew-tap.git
+brew tap fluch-it-consulting/tap
 brew install fluch-it-consulting/tap/rechnungsgenerator
 ```
-
-Die Adresse ist nötig, weil der Tap privat ist: `brew tap` allein klont über
-HTTPS und findet dort keine Zugangsdaten. Wer `gh auth setup-git` eingerichtet
-hat, kommt auch ohne sie aus.
 
 **3. Ein JDK 21 oder neuer.** Ein vorhandenes genügt – die Formel verlangt
 keines als Abhängigkeit und setzt auch kein JAVA_HOME. Wer keines hat:
@@ -110,8 +110,6 @@ rechnungsgenerator erzeuge rechnung.yaml
   `/Library/TeX/texbin` gehört dann hinein.
 - **„Unable to locate a Java Runtime"** – es ist kein JDK im PATH und kein
   JAVA_HOME gesetzt, siehe Schritt 3.
-- **`brew tap` fragt nach einem Benutzernamen** – die SSH-Adresse aus Schritt 2
-  fehlt, oder der eigene Zugang reicht nicht bis zu diesem Repository.
 
 ### Anheben auf eine neue Fassung
 
