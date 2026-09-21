@@ -23,7 +23,7 @@ class Rechnungsgenerator < Formula
         "Accept: application/octet-stream",
         "Authorization: Bearer #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "")}",
       ]
-  version "0.0.9"
+  version "0.1.0"
   sha256 "11d1f3b80392131acc773b66566ba86e055b5d0f143247697749a979c4648cc0"
   license "Apache-2.0"
 
