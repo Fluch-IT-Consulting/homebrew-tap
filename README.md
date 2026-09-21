@@ -26,21 +26,34 @@ export HOMEBREW_GITHUB_API_TOKEN=ghp_…
 Homebrew setzt den Wert erst beim Herunterladen ein; er landet nicht im Cache
 und nicht in den Protokollen.
 
-**2. Tap hinzufügen und installieren:**
+**2. Tap hinzufügen** – mit der SSH-Adresse dahinter:
 
 ```
-brew tap fluch-it-consulting/tap
+brew tap fluch-it-consulting/tap git@github.com:Fluch-IT-Consulting/homebrew-tap.git
 brew install fluch-it-consulting/tap/rechnungsgenerator
 ```
 
-**3. TeX Live**, denn gesetzt wird mit LuaLaTeX:
+Die Adresse ist nötig, weil der Tap privat ist: `brew tap` allein klont über
+HTTPS und findet dort keine Zugangsdaten. Wer `gh auth setup-git` eingerichtet
+hat, kommt auch ohne sie aus.
+
+**3. Ein JDK 21 oder neuer.** Ein vorhandenes genügt – die Formel verlangt
+keines als Abhängigkeit und setzt auch kein JAVA_HOME. Wer keines hat:
+
+```
+brew install openjdk
+```
+
+Auf macOS 14 und älter führt Homebrew dafür keine fertigen Pakete mehr (Tier 3)
+und baut das JDK aus dem Quelltext; das dauert lange und verlangt volles Xcode.
+Dort ist ein fertiges JDK, etwa von [Temurin](https://adoptium.net/), der
+schnellere Weg.
+
+**4. TeX Live**, denn gesetzt wird mit LuaLaTeX:
 
 ```
 brew install --cask mactex-no-gui
 ```
-
-Das Java bringt die Formel als Abhängigkeit mit; darum muss sich niemand
-kümmern.
 
 ### Prüfen
 
@@ -55,6 +68,10 @@ rechnungsgenerator erzeuge rechnung.yaml
   hat kein Leserecht auf das Repository des Generators.
 - **„lualatex nicht gefunden"** – TeX Live fehlt oder liegt nicht im PATH.
   `/Library/TeX/texbin` gehört dann hinein.
+- **„Unable to locate a Java Runtime"** – es ist kein JDK im PATH und kein
+  JAVA_HOME gesetzt, siehe Schritt 3.
+- **`brew tap` fragt nach einem Benutzernamen** – die SSH-Adresse aus Schritt 2
+  fehlt, oder der eigene Zugang reicht nicht bis zu diesem Repository.
 
 ### Anheben auf eine neue Fassung
 

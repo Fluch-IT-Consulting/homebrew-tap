@@ -27,27 +27,36 @@ class Rechnungsgenerator < Formula
   sha256 "11d1f3b80392131acc773b66566ba86e055b5d0f143247697749a979c4648cc0"
   license "Apache-2.0"
 
-  depends_on "openjdk"
+  # Bewusst kein depends_on "openjdk": Auf macOS 14 und älter führt Homebrew
+  # keine Bottles mehr (Tier 3) und begänne, JDK 27 aus dem Quelltext zu bauen
+  # – nachgemessen bricht das nach Minuten ab, weil die Metal-Toolchain aus
+  # vollem Xcode fehlt. Der Gewinn wäre, dass niemand über Java nachdenken
+  # muss; der Preis ist ein langer Bau, der in einer Xcode-Meldung endet. Ein
+  # Satz in den caveats ist die bessere Fehlermeldung.
 
   def install
     # Das Archiv ist eine fertige Gradle-Distribution: bin/, lib/ und daneben
     # LICENSE, NOTICE und THIRD-PARTY.md.
     libexec.install Dir["*"]
 
-    # Nicht bin.install_symlink: Das Startskript sucht sein JAVA. Ohne gesetztes
-    # JAVA_HOME nähme es das erste java im PATH – und das kann jede Fassung sein
-    # oder keine.
-    (bin/"rechnungsgenerator").write_env_script libexec/"bin/rechnungsgenerator",
-                                                JAVA_HOME: Formula["openjdk"].opt_prefix
+    # Das Startskript löst Symlinks selbst auf und findet so seine JARs; sein
+    # Java sucht es über JAVA_HOME oder den PATH.
+    bin.install_symlink libexec/"bin/rechnungsgenerator"
   end
 
   def caveats
     <<~EOS
-      Der Generator setzt mit LuaLaTeX. TeX Live muss im PATH liegen:
+      Der Generator braucht zweierlei im PATH:
 
-        brew install --cask mactex-no-gui
+        * Ein JDK 21 oder neuer. Ein vorhandenes genügt; sonst
+            brew install openjdk
+          Auf macOS 14 und älter baut Homebrew openjdk aus dem Quelltext –
+          dort ist ein fertiges JDK, etwa von Temurin, der schnellere Weg.
 
-      Das Programm prüft das beim Start und sagt, was fehlt.
+        * TeX Live mit lualatex, denn gesetzt wird mit LuaLaTeX:
+            brew install --cask mactex-no-gui
+
+      LuaLaTeX prüft das Programm beim Start und sagt, wenn es fehlt.
 
       Die Lizenzen der mitgelieferten Bibliotheken stehen in
         #{libexec}/THIRD-PARTY.md
