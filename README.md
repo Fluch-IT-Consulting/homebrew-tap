@@ -14,14 +14,49 @@ Beide Repositories sind **privat**. Dafür braucht es dreierlei: Lesezugriff auf
 dieses Tap-Repository, Lesezugriff auf das Repository des Generators und einen
 GitHub-Token in der Umgebung.
 
-**1. Token anlegen.** Ein Personal Access Token mit Leserecht auf
-`Fluch-IT-Consulting/rechnungsgenerator` (Scope `repo` beim klassischen Token,
-oder `Contents: Read` bei einem Fine-grained Token). Er gehört in die eigene
-Shell-Konfiguration:
+**1. Token anlegen.** Einen *Fine-grained* Personal Access Token auf
+<https://github.com/settings/personal-access-tokens/new>:
+
+- **Resource owner: `Fluch-IT-Consulting`** – nicht das eigene Konto. Dieser
+  Schritt wird am häufigsten übersehen, und mit dem falschen Owner antwortet
+  die API später mit 404.
+- **Expiration:** höchstens 366 Tage; mehr lässt die Organisation nicht zu.
+- **Repository access:** „Only select repositories" → Knopf
+  `Select repositories` → `Fluch-IT-Consulting/rechnungsgenerator`. In der
+  Liste steht auch `homebrew-tap`; das wird hier **nicht** gebraucht, denn den
+  Tap klont Homebrew über git und SSH.
+- **Permissions:** `+ Add permissions`, im Suchfeld `Contents` eintippen – die
+  Liste ist alphabetisch und lang. Danach ist nur zu **prüfen**, dass
+  `Contents` und das automatisch ergänzte `Metadata` auf *Access: Read-only*
+  stehen; einstellen muss man nichts.
+
+Unter dem Knopf `Generate token` steht, ob der Token sofort gilt. Für
+Mitglieder der Organisation ist die Freigabe durch einen Administrator nötig –
+sie erfolgt unter Organisationseinstellungen → *Personal access tokens* →
+Reiter *Pending requests*. GitHub zeigt den Wert genau einmal.
+
+**Nicht** im Klartext in die `.zshrc`: Solche Dateien landen in
+Time-Machine-Sicherungen und, der häufigste Unfall, in Dotfiles-Repos. Auf
+macOS gehört der Token in die Keychain:
 
 ```
-export HOMEBREW_GITHUB_API_TOKEN=ghp_…
+security add-generic-password -a "$USER" -s homebrew-github-api-token \
+  -w '<token>' -D "Homebrew GitHub API token" -T /usr/bin/security -U
 ```
+
+Dazu in die Shell-Konfiguration eine Funktion, die ihn nur für den einen
+`brew`-Aufruf setzt – so steht er in keinem anderen Prozess und nicht in `env`:
+
+```sh
+brew() {
+  HOMEBREW_GITHUB_API_TOKEN="$(security find-generic-password -a "$USER" -s homebrew-github-api-token -w 2>/dev/null)" \
+    command brew "$@"
+}
+```
+
+`-T /usr/bin/security` setzt genau dieses Programm auf die Zugriffsliste des
+Eintrags; deshalb fragt macOS beim Lesen in der Regel nicht nach. Kommt doch
+ein Dialog, ist „Immer erlauben" die Antwort.
 
 Homebrew setzt den Wert erst beim Herunterladen ein; er landet nicht im Cache
 und nicht in den Protokollen.
@@ -64,8 +99,13 @@ rechnungsgenerator erzeuge rechnung.yaml
 
 ### Wenn es klemmt
 
-- **401 oder 404 beim Herunterladen** – der Token fehlt, ist abgelaufen oder
-  hat kein Leserecht auf das Repository des Generators.
+- **401 beim Herunterladen** – der Token fehlt, ist abgelaufen oder falsch
+  kopiert.
+- **403 beim Herunterladen** – der Token wartet vermutlich noch auf die
+  Freigabe durch einen Administrator.
+- **404 beim Herunterladen** – der Token sieht das Repository nicht. Fast
+  immer stand als *Resource owner* das eigene Konto statt
+  `Fluch-IT-Consulting`; dann hilft nur, ihn neu anzulegen.
 - **„lualatex nicht gefunden"** – TeX Live fehlt oder liegt nicht im PATH.
   `/Library/TeX/texbin` gehört dann hinein.
 - **„Unable to locate a Java Runtime"** – es ist kein JDK im PATH und kein
