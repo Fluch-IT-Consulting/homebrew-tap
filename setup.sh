@@ -183,7 +183,7 @@ finish() {
 # STAGES
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=6
+TOTAL_STAGES=5
 
 REPO="Fluch-IT-Consulting/rechnungsgenerator"
 TAP="fluch-it-consulting/tap"
@@ -193,7 +193,7 @@ banner "Rechnungsgenerator einrichten"
 # ── 1 ─────────────────────────────────────────────────────────────────────
 stage "Voraussetzungen"
 say "Der Tap ist öffentlich, das Repository des Generators nicht. Du brauchst"
-say "deshalb Homebrew und später einen Token mit Leserecht darauf."
+say "deshalb Homebrew, die GitHub-CLI und Leserecht auf das Repository."
 printf '\n'
 
 if command -v brew >/dev/null 2>&1; then
@@ -207,56 +207,37 @@ printf '\n'
 pause "Weiter mit Enter"
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
-stage "Token anlegen"
-say "Homebrew lädt das Archiv über die GitHub-API. Dafür braucht es einen"
-say "Token mit Leserecht auf genau ein Repository."
+stage "Token von der GitHub-CLI"
+say "Homebrew lädt das Archiv über die GitHub-API und braucht dafür einen"
+say "Token mit Leserecht auf das Repository. Anlegen musst du keinen: Die"
+say "GitHub-CLI hat einen, sobald du angemeldet bist."
 printf '\n'
-open_url "https://github.com/settings/personal-access-tokens/new"
-step "Token name: etwa 'rechnungsgenerator brew'"
-step "Resource owner: Fluch-IT-Consulting auswählen – NICHT dein eigenes Konto."
-note "  Das ist der Schritt, den man am leichtesten übersieht."
-step "Expiration: höchstens 366 Tage – mehr lässt die Organisation nicht zu."
-step "Repository access: 'Only select repositories' anklicken,"
-step "dann den Knopf 'Select repositories' und in der Liste genau"
-step "Fluch-IT-Consulting/rechnungsgenerator anhaken."
-note "  In der Liste steht womöglich auch Fluch-IT-Consulting/homebrew-tap."
-note "  Das wird hier NICHT gebraucht – der Tap ist öffentlich."
-step "Permissions: auf '+ Add permissions' klicken."
-step "Im Suchfeld 'Contents' eintippen – die Liste ist alphabetisch und lang,"
-step "Tippen geht schneller als Scrollen."
-step "'Contents' anhaken. Dann steht unter 'Repositories' zweierlei:"
-note "  Contents  · Access: Read-only"
-note "  Metadata  · Access: Read-only  (Required, fügt GitHub selbst hinzu)"
-step "Nur prüfen, dass bei beiden 'Read-only' steht – einstellen musst du"
-step "nichts, so kommen sie herein."
-note "  Mehr braucht es nicht: Homebrew lädt genau eine Datei herunter."
-printf '\n'
-say "Bevor du 'Generate token' drückst: Lies die Zeile darunter."
-note "  'ready for use immediately' → der Token gilt sofort."
-note "  Ein Hinweis auf eine Genehmigung → er steht erst auf 'Pending'."
-printf '\n'
-step "Jetzt 'Generate token' drücken und den Wert kopieren."
-note "  GitHub zeigt ihn genau einmal."
-printf '\n'
-say "Die Organisation verlangt für Mitglieder die Genehmigung eines"
-say "Administrators. Trifft dich das, sag Martin Bescheid: Er gibt den Token"
-say "frei unter Organisationseinstellungen → Personal access tokens →"
-say "Reiter 'Pending requests'."
-printf '\n'
-note "Der kopierte Wert bleibt danach derselbe – du kannst ihn schon jetzt"
-note "einfügen und diesen Wizard nach der Freigabe noch einmal starten."
-printf '\n'
-pause "Weiter mit Enter"
-printf '\n'
-ask_secret GH_TOKEN "Token einfügen (Eingabe bleibt verdeckt):"
 
-if [[ -z "${GH_TOKEN:-}" ]]; then
-  warn "Kein Token eingegeben – ohne ihn geht es nicht weiter."
+if ! command -v gh >/dev/null 2>&1; then
+  warn "Die GitHub-CLI fehlt."
+  note "  brew install gh"
+  note "  Danach diesen Wizard noch einmal starten."
+  exit 1
+fi
+say "$(printf '%s✓%s %s' "$GREEN" "$RESET" "$(gh --version 2>/dev/null | head -1)")"
+
+if ! gh auth status >/dev/null 2>&1; then
+  warn "Die GitHub-CLI ist nicht angemeldet."
+  note "  gh auth login"
+  note "  Danach diesen Wizard noch einmal starten."
   exit 1
 fi
 
+GH_TOKEN="$(gh auth token 2>/dev/null || true)"
+if [[ -z "$GH_TOKEN" ]]; then
+  warn "'gh auth token' gibt nichts aus, obwohl die Anmeldung steht."
+  note "  Melde dich neu an: gh auth logout && gh auth login"
+  exit 1
+fi
+say "$(printf '%s✓%s Angemeldet als %s' "$GREEN" "$RESET" "$(gh api user --jq .login 2>/dev/null || printf '?')")"
 printf '\n'
-say "Ich prüfe den Token gegen das Repository, bevor er irgendwo landet."
+
+say "Ich prüfe, ob dieser Token das Repository sieht."
 http=$(curl -sS -o /dev/null -w '%{http_code}' \
   -H "Authorization: Bearer ${GH_TOKEN}" \
   -H "Accept: application/vnd.github+json" \
@@ -264,128 +245,96 @@ http=$(curl -sS -o /dev/null -w '%{http_code}' \
 
 case "$http" in
   200) say "$(printf '%s✓%s Der Token liest %s.' "$GREEN" "$RESET" "$REPO")" ;;
-  401) warn "401 – der Token ist ungültig oder falsch kopiert." ; exit 1 ;;
-  403) warn "403 – mit hoher Wahrscheinlichkeit noch nicht freigegeben."
-       note "  Die Organisation verlangt die Genehmigung eines Administrators."
-       note "  Martin findet die Anfrage unter Organisationseinstellungen →"
-       note "  Personal access tokens → Reiter 'Pending requests'."
-       note "  Danach diesen Wizard einfach noch einmal starten."
+  401) warn "401 – der Token gilt nicht mehr."
+       note "  Melde dich neu an: gh auth login"
        exit 1 ;;
-  404) warn "404 – der Token sieht das Repository nicht."
-       note "  Häufigster Grund: Als Resource owner stand das eigene Konto"
-       note "  statt Fluch-IT-Consulting. Leg ihn noch einmal an."
+  403|404)
+       warn "$http – dein Konto sieht das Repository nicht."
+       note "  Entweder fehlt dir der Lesezugriff darauf – dann sag Martin"
+       note "  Bescheid, er trägt dich ein."
+       note "  Oder die Organisation hat die GitHub-CLI als Anwendung nicht"
+       note "  freigegeben; auch das klärt er."
        exit 1 ;;
   *)   warn "Unerwartete Antwort ($http). Netzwerk? Proxy?" ; exit 1 ;;
 esac
+export HOMEBREW_GITHUB_API_TOKEN="$GH_TOKEN"
+printf '\n'
+
+# Für diesen Lauf steht der Token jetzt in der Umgebung. Beim Anheben braucht
+# Homebrew ihn wieder – dafür eine brew-Funktion, die ihn für genau den einen
+# Aufruf holt.
+case "$(basename "${SHELL:-/bin/zsh}")" in
+  zsh)  RC="$HOME/.zshrc" ;;
+  bash) if [[ -f "$HOME/.bash_profile" ]]; then RC="$HOME/.bash_profile"; else RC="$HOME/.bashrc"; fi ;;
+  *)    RC="" ;;
+esac
+
+if [[ -z "$RC" ]]; then
+  warn "Deine Shell kenne ich nicht ($SHELL) – trag es selbst ein:"
+  note "  HOMEBREW_GITHUB_API_TOKEN aus 'gh auth token' setzen, wenn du"
+  note "  'brew upgrade' für diese Formel aufrufst."
+  SKIPPED+=("brew-Funktion in die Shell-Konfiguration eintragen")
+else
+  say "Damit 'brew upgrade' den Token später auch hat, lege ich eine kleine"
+  say "brew-Funktion in $RC an."
+  note "  Sie setzt die Variable NUR für den einen brew-Aufruf – nicht für"
+  note "  jedes Programm, das du startest, und nicht sichtbar in 'env'."
+  printf '\n'
+
+  if confirm "So anlegen?"; then
+    touch "$RC"
+    tmp=$(mktemp)
+    # Einen früheren Block dieses Wizards entfernen – und einen alten
+    # Klartext-Eintrag gleich mit, falls eine ältere Fassung ihn schrieb.
+    awk '
+      /^# >>> rechnungsgenerator/ { skip = 1; next }
+      skip && /^# <<< rechnungsgenerator/ { skip = 0; next }
+      skip { next }
+      /^export HOMEBREW_GITHUB_API_TOKEN=/ { found = 1; next }
+      { print }
+      END { if (found) print "" > "/dev/stderr" }
+    ' "$RC" > "$tmp" 2>"$tmp.alt"
+
+    {
+      printf '# >>> rechnungsgenerator (Homebrew-Token von der GitHub-CLI) >>>\n'
+      printf '# Setzt den Token nur fuer den einen brew-Aufruf.\n'
+      printf 'brew() {\n'
+      printf '  HOMEBREW_GITHUB_API_TOKEN="$(gh auth token 2>/dev/null)" \\\n'
+      printf '    command brew "$@"\n'
+      printf '}\n'
+      printf '# <<< rechnungsgenerator <<<\n'
+    } >> "$tmp"
+
+    if [[ -s "$tmp.alt" ]]; then
+      warn "In $RC stand der Token bisher im Klartext – ich habe die Zeile entfernt."
+      note "  Lag die Datei je in einer Sicherung oder einem Repo, gilt der"
+      note "  Token als verbrannt: widerrufe ihn auf github.com."
+    fi
+    rm -f "$tmp.alt"
+
+    mv "$tmp" "$RC"
+    printf '  %s✓ geschrieben%s brew-Funktion → %s\n' "$GREEN" "$RESET" "$RC"
+    note "  Ein früherer Block wurde ersetzt, nicht verdoppelt."
+    note "  Sie gilt ab der nächsten Shell; in dieser hier reicht der Lauf."
+
+    # Wer eine ältere Fassung dieses Wizards laufen ließ, hat den Token noch
+    # in der Keychain. Gebraucht wird er nicht mehr; weg räumt ihn der Mensch.
+    if command -v security >/dev/null 2>&1 &&
+       security find-generic-password -a "$USER" -s homebrew-github-api-token >/dev/null 2>&1; then
+      printf '\n'
+      note "Aus einer früheren Fassung liegt noch ein Token in deiner Keychain."
+      note "Gebraucht wird er nicht mehr. Löschen – und auf github.com widerrufen:"
+      note "  security delete-generic-password -a \"\$USER\" -s homebrew-github-api-token"
+    fi
+  else
+    SKIPPED+=("brew-Funktion in die Shell-Konfiguration eintragen")
+    note "Übersprungen. Für diesen Lauf reicht die Variable in dieser Shell."
+  fi
+fi
 printf '\n'
 pause "Weiter mit Enter"
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
-stage "Token in die Keychain"
-say "Der Token gehört nicht im Klartext in eine Datei. Dateien landen in"
-say "Time-Machine-Sicherungen und – der häufigste Unfall – in Dotfiles-Repos."
-say "Die Keychain deines Benutzers ist dafür der richtige Ort."
-printf '\n'
-
-KEYCHAIN_SERVICE="homebrew-github-api-token"
-
-if ! command -v security >/dev/null 2>&1; then
-  warn "Das Programm 'security' gibt es nur auf macOS."
-  note "  Stelle HOMEBREW_GITHUB_API_TOKEN selbst bereit, so wie es bei dir"
-  note "  üblich ist – etwa aus deinem Passwortspeicher."
-  SKIPPED+=("HOMEBREW_GITHUB_API_TOKEN dauerhaft bereitstellen")
-else
-  case "$(basename "${SHELL:-/bin/zsh}")" in
-    zsh)  RC="$HOME/.zshrc" ;;
-    bash) if [[ -f "$HOME/.bash_profile" ]]; then RC="$HOME/.bash_profile"; else RC="$HOME/.bashrc"; fi ;;
-    *)    RC="" ;;
-  esac
-
-  say "Ich lege zweierlei an:"
-  step "einen Eintrag '$KEYCHAIN_SERVICE' in deiner Login-Keychain"
-  if [[ -n "$RC" ]]; then
-    step "eine kleine brew-Funktion in $RC, die ihn von dort holt"
-    note "  Sie setzt die Variable NUR für den einen brew-Aufruf – nicht für"
-    note "  jedes Programm, das du startest, und nicht sichtbar in 'env'."
-  fi
-  printf '\n'
-
-  if confirm "So anlegen?"; then
-    if security add-generic-password \
-         -a "$USER" -s "$KEYCHAIN_SERVICE" -w "$GH_TOKEN" \
-         -D "Homebrew GitHub API token" \
-         -T /usr/bin/security -U 2>/dev/null; then
-      printf '  %s✓ gespeichert%s in der Keychain: %s\n' "$GREEN" "$RESET" "$KEYCHAIN_SERVICE"
-    else
-      warn "Die Keychain hat den Eintrag nicht angenommen."
-      SKIPPED+=("Token in der Keychain ablegen")
-    fi
-
-    printf '\n'
-    say "Jetzt lese ich ihn einmal zurück."
-    note "Meist fragt macOS dabei nicht: '-T /usr/bin/security' setzt genau"
-    note "dieses Programm auf die Zugriffsliste des Eintrags. Kommt doch ein"
-    note "Dialog, wähle 'Immer erlauben' – sonst fragt es jedes Mal wieder."
-    printf '\n'
-    back=$(security find-generic-password -a "$USER" -s "$KEYCHAIN_SERVICE" -w 2>/dev/null || true)
-    if [[ "$back" == "$GH_TOKEN" ]]; then
-      printf '  %s✓ zurückgelesen%s – der Wert stimmt.\n' "$GREEN" "$RESET"
-    else
-      warn "Zurücklesen hat nicht geklappt (abgebrochen oder verweigert?)."
-      note "  Der Eintrag ist da; brew wird beim nächsten Mal erneut fragen."
-    fi
-
-    if [[ -n "$RC" ]]; then
-      touch "$RC"
-      tmp=$(mktemp)
-      # Einen früheren Block dieses Wizards entfernen – und einen alten
-      # Klartext-Eintrag gleich mit, falls eine ältere Fassung ihn schrieb.
-      awk '
-        /^# >>> rechnungsgenerator/ { skip = 1; next }
-        skip && /^# <<< rechnungsgenerator/ { skip = 0; next }
-        skip { next }
-        /^export HOMEBREW_GITHUB_API_TOKEN=/ { found = 1; next }
-        { print }
-        END { if (found) print "" > "/dev/stderr" }
-      ' "$RC" > "$tmp" 2>"$tmp.alt"
-
-      {
-        printf '# >>> rechnungsgenerator (Homebrew-Token aus der Keychain) >>>\n'
-        printf '# Setzt den Token nur fuer den einen brew-Aufruf.\n'
-        printf 'brew() {\n'
-        printf '  HOMEBREW_GITHUB_API_TOKEN="$(security find-generic-password -a "$USER" -s %s -w 2>/dev/null)" \\\n' "$KEYCHAIN_SERVICE"
-        printf '    command brew "$@"\n'
-        printf '}\n'
-        printf '# <<< rechnungsgenerator <<<\n'
-      } >> "$tmp"
-
-      if [[ -s "$tmp.alt" ]]; then
-        warn "In $RC stand der Token bisher im Klartext – ich habe die Zeile entfernt."
-        note "  Lag die Datei je in einer Sicherung oder einem Repo, gilt der"
-        note "  Token als verbrannt: neu anlegen und den alten widerrufen."
-      fi
-      rm -f "$tmp.alt"
-
-      mv "$tmp" "$RC"
-      printf '  %s✓ geschrieben%s brew-Funktion → %s\n' "$GREEN" "$RESET" "$RC"
-      note "  Ein früherer Block wurde ersetzt, nicht verdoppelt."
-      note "  Sie gilt ab der nächsten Shell; in dieser hier reicht der Lauf."
-    else
-      warn "Deine Shell kenne ich nicht ($SHELL) – trag es selbst ein:"
-      note "  HOMEBREW_GITHUB_API_TOKEN aus '$KEYCHAIN_SERVICE' lesen."
-      SKIPPED+=("brew-Funktion in die Shell-Konfiguration eintragen")
-    fi
-  else
-    SKIPPED+=("Token in der Keychain ablegen")
-    note "Übersprungen. Für diesen Lauf reicht die Variable in dieser Shell."
-  fi
-fi
-
-export HOMEBREW_GITHUB_API_TOKEN="$GH_TOKEN"
-printf '\n'
-pause "Weiter mit Enter"
-
-# ── 4 ─────────────────────────────────────────────────────────────────────
 stage "JDK und TeX Live"
 say "Der Generator läuft auf der JVM und setzt mit LuaLaTeX. Beides bringt"
 say "die Formel bewusst NICHT mit."
@@ -412,7 +361,7 @@ fi
 printf '\n'
 pause "Weiter mit Enter"
 
-# ── 5 ─────────────────────────────────────────────────────────────────────
+# ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Tap hinzufügen"
 say "Der Tap ist öffentlich – hier braucht es keine Zugangsdaten."
 printf '\n'
@@ -433,7 +382,7 @@ fi
 printf '\n'
 pause "Weiter mit Enter"
 
-# ── 6 ─────────────────────────────────────────────────────────────────────
+# ── 5 ─────────────────────────────────────────────────────────────────────
 stage "Installieren und Probelauf"
 say "Jetzt lädt Homebrew das Archiv über die API und prüft seine Prüfsumme."
 printf '\n'
@@ -455,7 +404,8 @@ fi
 
 printf '\n'
 say "Probiere es aus:"
-note "  rechnungsgenerator erzeuge rechnung.yaml -s stammdaten.yaml"
+note "  rechnungsgenerator einrichten"
+  note "  rechnungsgenerator erzeuge rechnung.yaml"
 note "  rechnungsgenerator --help"
 printf '\n'
 pause "Weiter mit Enter"
