@@ -14,9 +14,6 @@ Dieser Tap ist öffentlich, das Repository des Generators ist **privat**. Dafür
 braucht es zweierlei: Lesezugriff darauf und einen GitHub-Token in der
 Umgebung. Den Token legst du nicht an – die GitHub-CLI hat ihn schon.
 
-Wer sich die Schritte lieber abnehmen lässt, nimmt [`setup.sh`](setup.sh) –
-dasselbe in fünf Stufen, mit Prüfung nach jedem Schritt.
-
 **1. Bei GitHub angemeldet sein.**
 
 ```
@@ -31,16 +28,16 @@ brew tap fluch-it-consulting/tap
 HOMEBREW_GITHUB_API_TOKEN=$(gh auth token) brew install fluch-it-consulting/tap/rechnungsgenerator
 ```
 
-Beim Anheben braucht Homebrew den Token wieder – es lädt dann ein neues
-Archiv. Wer nicht jedes Mal daran denken will, setzt ihn in der
-Shell-Konfiguration für genau den einen Aufruf; so steht er in keinem anderen
-Prozess und nicht in `env`:
+Beim Anheben braucht Homebrew den Token wieder, es lädt dann ein neues
+Archiv:
 
-```sh
-brew() {
-  HOMEBREW_GITHUB_API_TOKEN="$(gh auth token 2>/dev/null)" command brew "$@"
-}
 ```
+HOMEBREW_GITHUB_API_TOKEN=$(gh auth token) brew upgrade fluch-it-consulting/tap/rechnungsgenerator
+```
+
+Ein `brew upgrade` über alles hinweg, ohne Formel und ohne Token, scheitert an
+dieser einen mit `401` – der Preis dafür, dass der Token nirgends dauerhaft
+steht.
 
 **3. Ein JDK 21 oder neuer.** Ein vorhandenes genügt – die Formel verlangt
 keines als Abhängigkeit und setzt auch kein JAVA_HOME. Wer keines hat:
