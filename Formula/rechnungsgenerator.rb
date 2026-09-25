@@ -18,13 +18,13 @@
 class Rechnungsgenerator < Formula
   desc "Erzeugt aus YAML eine deutsche Rechnung als geprüftes PDF/A-1b"
   homepage "https://github.com/Fluch-IT-Consulting/rechnungsgenerator"
-  url "https://api.github.com/repos/Fluch-IT-Consulting/rechnungsgenerator/releases/assets/585643880",
+  url "https://api.github.com/repos/Fluch-IT-Consulting/rechnungsgenerator/releases/assets/589014518",
       headers: [
         "Accept: application/octet-stream",
         "Authorization: Bearer #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "")}",
       ]
-  version "0.3.0"
-  sha256 "8e9677c28617913b720a495bda59569e934a4057828a13839b2c5c9260d3c6f0"
+  version "0.3.1"
+  sha256 "49ec6494ad54f29ae9c4b40c34cfbd908ab4caf0ef5dbc499144eff0c4c42de2"
   license "Apache-2.0"
 
   # Bewusst kein depends_on "openjdk": Auf macOS 14 und älter führt Homebrew
