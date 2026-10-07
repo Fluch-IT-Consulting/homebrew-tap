@@ -4,9 +4,10 @@
 brew tap fluch-it-consulting/tap
 ```
 
-| Formel | Anleitung |
-|---|---|
-| `rechnungsgenerator` | [README des Generators](https://github.com/Fluch-IT-Consulting/rechnungsgenerator#installation) |
+| Paket | Art | Anleitung |
+|---|---|---|
+| `rechnungsgenerator` | Formel | [README des Generators](https://github.com/Fluch-IT-Consulting/rechnungsgenerator#installation) |
+| `macvoctrain` | Cask | [README der App](https://github.com/Fluch-IT-Consulting/MacVocTrainNg#installation) |
 
-Die Formeln hebt der Release-Workflow des jeweiligen Werkzeugs an; Commits von
-`github-actions[bot]` kommen von dort.
+Formeln und Casks hebt der Release-Workflow des jeweiligen Werkzeugs an; Commits
+von `github-actions[bot]` kommen von dort.
