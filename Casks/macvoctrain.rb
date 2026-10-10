@@ -8,8 +8,8 @@
 # version und sha256 hebt der Release-Workflow der App an (tap-bump.yml); die
 # URL folgt der Fassung.
 cask "macvoctrain" do
-  version "0.6.0"
-  sha256 "394c80780e69ab7bd336a4480f151266255f088cf39e1a87b1518a59575f6a13"
+  version "0.7.0"
+  sha256 "549e97aa87b41f4b7280011aa91a5a66ce34f811113da93c48b4a9b91828abac"
 
   url "https://github.com/Fluch-IT-Consulting/MacVocTrainNg/releases/download/v#{version}/MacVocTrain-#{version}.dmg"
   name "MacVocTrain"
