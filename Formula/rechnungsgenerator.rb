@@ -1,35 +1,14 @@
-# Formel für ein Werkzeug aus einem PRIVATEN Repository.
-#
-# Homebrew brachte dafür früher GitHubPrivateRepositoryReleaseDownloadStrategy
-# mit. Die gibt es seit Homebrew 7 nicht mehr – nachgesehen im Quellbaum von
-# 7.0.1, kein Treffer mehr auf GitHubPrivate. Der Weg ist jetzt die GitHub-API
-# als URL plus ein Authorization-Header.
-#
-# Der Token steht nicht in dieser Datei. Homebrew ersetzt beim Auswerten der
-# Formel jede Umgebungsvariable, deren Name nach token|key|auth|password
-# aussieht, durch einen Platzhalter und setzt den echten Wert erst beim
-# Herunterladen ein; er landet damit weder im Cache noch in den Protokollen.
-# Nach einem Redirect wirft Homebrew den Authorization-Header weg – nötig,
-# weil die API auf S3 umleitet und S3 einen fremden Auth-Header ablehnt.
-#
-# Die URL trägt eine numerische Asset-ID, keine Fassungsnummer: Nur so lässt
-# sich ein Asset aus einem privaten Repository laden. Die ID vergibt GitHub je
-# Release neu, sie gehört also bei jedem Anheben mit erneuert.
 class Rechnungsgenerator < Formula
   desc "Erzeugt aus YAML eine deutsche Rechnung als geprüftes PDF/A-1b"
   homepage "https://github.com/Fluch-IT-Consulting/rechnungsgenerator"
-  url "https://api.github.com/repos/Fluch-IT-Consulting/rechnungsgenerator/releases/assets/743664849",
-      headers: [
-        "Accept: application/octet-stream",
-        "Authorization: Bearer #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "")}",
-      ]
-  version "0.7.2"
+  url "https://github.com/Fluch-IT-Consulting/rechnungsgenerator/releases/download/v0.7.2/rechnungsgenerator-0.7.2.zip"
   sha256 "1ae4931a933a6eefab8602282d25f6961614f92c648e2e9ec3114bdc2ec8249b"
   license "Apache-2.0"
 
-  # Bewusst kein depends_on "openjdk": Auf macOS 14 und älter führt Homebrew
-  # keine Bottles mehr (Tier 3) und begänne, JDK 27 aus dem Quelltext zu bauen
-  # – nachgemessen bricht das nach Minuten ab, weil die Metal-Toolchain aus
+  # Bewusst kein depends_on "openjdk": Bottles davon führt Homebrew nur für
+  # Apple Silicon ab macOS 15. Auf Intel-Macs und auf macOS 14 begänne es, JDK
+  # 27 samt cairo, glib und harfbuzz aus dem Quelltext zu bauen – auf macOS 14
+  # nachgemessen bricht das nach Minuten ab, weil die Metal-Toolchain aus
   # vollem Xcode fehlt. Der Gewinn wäre, dass niemand über Java nachdenken
   # muss; der Preis ist ein langer Bau, der in einer Xcode-Meldung endet. Ein
   # Satz in den caveats ist die bessere Fehlermeldung.
@@ -50,8 +29,9 @@ class Rechnungsgenerator < Formula
 
         * Ein JDK 21 oder neuer. Ein vorhandenes genügt; sonst
             brew install openjdk
-          Auf macOS 14 und älter baut Homebrew openjdk aus dem Quelltext –
-          dort ist ein fertiges JDK, etwa von Temurin, der schnellere Weg.
+          Auf Intel-Macs und auf macOS 14 baut Homebrew openjdk aus dem
+          Quelltext – dort ist ein fertiges JDK, etwa von Temurin, der
+          schnellere Weg.
 
         * TeX Live mit lualatex, denn gesetzt wird mit LuaLaTeX:
             brew install --cask mactex-no-gui
