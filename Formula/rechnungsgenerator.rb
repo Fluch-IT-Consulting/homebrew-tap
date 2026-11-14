@@ -18,9 +18,13 @@ class Rechnungsgenerator < Formula
     # LICENSE, NOTICE und THIRD-PARTY.md.
     libexec.install Dir["*"]
 
-    # Das Startskript löst Symlinks selbst auf und findet so seine JARs; sein
-    # Java sucht es über JAVA_HOME oder den PATH.
-    bin.install_symlink libexec/"bin/rechnungsgenerator"
+    # Ein Startskript und kein Symlink: Es reicht dem Programm den Ort des
+    # rechnung-Skills über opt/ herein. `skill installieren` legt darauf einen
+    # Link an, und nur dieser Pfad überlebt ein `brew upgrade` – das Programm
+    # selbst sieht sich unter Cellar/<fassung>. Fassungen vor 0.8.0 kennen die
+    # Variable nicht und übergehen sie.
+    (bin/"rechnungsgenerator").write_env_script libexec/"bin/rechnungsgenerator",
+                                                RECHNUNGSGENERATOR_SKILL: opt_libexec/"skill/rechnung"
   end
 
   def caveats
