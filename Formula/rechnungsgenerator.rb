@@ -14,8 +14,9 @@ class Rechnungsgenerator < Formula
   # Satz in den caveats ist die bessere Fehlermeldung.
 
   def install
-    # Das Archiv ist eine fertige Gradle-Distribution: bin/, lib/ und daneben
-    # LICENSE, NOTICE und THIRD-PARTY.md.
+    # Das Archiv ist eine fertige Gradle-Distribution: bin/, lib/, der
+    # rechnung-Skill unter skill/ und daneben LICENSE, NOTICE und
+    # THIRD-PARTY.md.
     libexec.install Dir["*"]
 
     # Ein Startskript und kein Symlink: Es reicht dem Programm den Ort des
@@ -42,6 +43,17 @@ class Rechnungsgenerator < Formula
 
       LuaLaTeX prüft das Programm beim Start und sagt, wenn es fehlt.
 
+      Das Paket bringt den Skill "rechnung" für Claude Code mit. Eingehängt
+      wird er einmal, als Link unter ~/.claude/skills:
+        rechnungsgenerator skill installieren
+      Seine Skripte brauchen python3 ab 3.9 mit PyYAML.
+
+      Vor einem "brew uninstall rechnungsgenerator" nimmt
+        rechnungsgenerator skill entfernen
+      den Link wieder weg; danach gibt es das Kommando nicht mehr. Ist das
+      vergessen, genügt
+        rm ~/.claude/skills/rechnung
+
       Die Lizenzen der mitgelieferten Bibliotheken stehen in
         #{libexec}/THIRD-PARTY.md
     EOS
@@ -52,5 +64,12 @@ class Rechnungsgenerator < Formula
 
     # Ohne Unterkommando zeigt das Programm die Hilfe und endet mit 1.
     assert_match "Usage: rechnungsgenerator", shell_output("#{bin}/rechnungsgenerator 2>&1", 1)
+
+    # Homebrew gibt dem Test ein leeres Heimatverzeichnis, dort ist nichts
+    # eingehängt. Geprüft wird, dass das Kommando da ist und der Skill im
+    # Paket liegt, auf den das Startskript zeigt. Verglichen wird ohne Umlaut:
+    # Unter der Locale des Tests schreibt Java statt "ä" ein "?".
+    assert_match "skills/rechnung gibt es nicht", shell_output("#{bin}/rechnungsgenerator skill status")
+    assert_path_exists libexec/"skill/rechnung/SKILL.md"
   end
 end
