@@ -1,8 +1,8 @@
 class Rechnungsgenerator < Formula
   desc "Erzeugt aus YAML eine deutsche Rechnung als geprüftes PDF/A-1b"
   homepage "https://github.com/Fluch-IT-Consulting/rechnungsgenerator"
-  url "https://github.com/Fluch-IT-Consulting/rechnungsgenerator/releases/download/v0.9.0/rechnungsgenerator-0.9.0.zip"
-  sha256 "872caf5836429baa63bc4e776cfa2acea9e41e71ebfd3d86da28d268e0680ab3"
+  url "https://github.com/Fluch-IT-Consulting/rechnungsgenerator/releases/download/v0.10.0/rechnungsgenerator-0.10.0.zip"
+  sha256 "096f135094d582aa2191d75da6d11967b56591a7c982decb40e1dc9f329c7bae"
   license "Apache-2.0"
 
   # Bewusst kein depends_on "openjdk": Bottles davon führt Homebrew nur für
